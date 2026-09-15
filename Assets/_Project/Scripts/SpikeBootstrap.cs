@@ -57,6 +57,9 @@ namespace QuestParkTycoon
             // Sim tick: fixed 10 Hz, never on the render thread's mercy.
             root.AddComponent<SimTick>();
 
+            // Phase-1 park sim: clock, rating, guests, spawner, staff.
+            ParkSimBootstrap.EnsureParkSystems();
+
             Debug.Log("[QuestParkTycoon] Spike bootstrap complete.");
         }
 

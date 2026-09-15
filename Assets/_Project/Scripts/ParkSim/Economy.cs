@@ -38,5 +38,26 @@ namespace QuestParkTycoon
         {
             return Mathf.Pow(0.75f, Mathf.Max(0, duplicateCount));
         }
+
+        /// <summary>Can this guest afford a price? Gate before queueing/buying.</summary>
+        public static bool CanAfford(GuestAgent guest, float price)
+        {
+            return guest != null && guest.wallet >= price;
+        }
+
+        /// <summary>
+        /// How the park charges a guest: deducts price from the guest's wallet
+        /// and adds it to park Cash. Returns the amount actually paid
+        /// (0 when the guest can't afford it — caller picks another option).
+        /// Used for admission, ride tickets (on boarding), and stall sales.
+        /// </summary>
+        public static float TakePayment(GuestAgent guest, float price)
+        {
+            if (guest == null || price <= 0f) return 0f;
+            if (guest.wallet < price) return 0f;
+            guest.wallet -= price;
+            Cash += price;
+            return price;
+        }
     }
 }
