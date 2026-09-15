@@ -1,0 +1,28 @@
+# Minimal scaffold PlayerSettings for Quest Park Tycoon.
+# Unity regenerates any missing fields with defaults on first open — the
+# authoritative setup checklist is docs/SETUP.md. Verified settings:
+#   companyName=iamkeeler, productName="Quest Park Tycoon",
+#   bundle id=com.iamkeeler.questparktycoon, Android/ARM64/IL2CPP,
+#   minSdk=32, targetSdk=34.
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!129 &1
+PlayerSettings:
+  m_ObjectHideFlags: 0
+  serializedVersion: 22
+  productGUID: 8b3f4c2a9d1e4f7a8c6b5d3e2f1a4c7e
+  AndroidBundleVersionCode: 1
+  AndroidMinSdkVersion: 32
+  AndroidTargetSdkVersion: 34
+  AndroidTargetArchitectures: 2
+  companyName: iamkeeler
+  productName: Quest Park Tycoon
+  applicationIdentifier:
+    Android: com.iamkeeler.questparktycoon
+    Standalone: com.iamkeeler.questparktycoon
+  scriptingBackend:
+    Android: 1
+  il2CppCodeGeneration: 1
+  apiCompatibilityLevelPerPlatform:
+    Android: 2
+  runInBackground: true
