@@ -171,9 +171,9 @@ Each phase ends with a tagged release + APK artifact (`build-apk` label pattern)
 
 ---
 
-## 8. Open Questions for Gary
-1. **Art direction:** stylized low-poly flat-shaded (cheap, charming, fast) vs. a more detailed "miniature model" look (costlier)? This drives the whole asset budget.
-2. **Scenario 1 setting:** classic greenfield park, or a themed starter (e.g., beachfront with water-ride hook — but water rides are Phase 2, so greenfield keeps MVP honest)?
-3. **Pricing model for the game itself:** free App Lab experiment, paid release, or portfolio piece only? Affects how much polish Phase 3 gets.
-4. **Hand tracking priority:** nice-to-have alongside controllers, or a headline feature (build mode fully hand-driven)? Full hand-driven building is significantly more work.
-5. **Co-op spectator in Phase 3 — keep, cut, or promote?** It's the most technically risky item on the roadmap; say now if it's not worth it.
+## 8. Open Questions for Gary — ANSWERED 2026-09-15
+1. **Art direction:** ✅ Colorful, fun, cartoony — clay-model / miniature-diorama look. Low-poly to start, clay shading as the target feel.
+2. **Scenario 1:** ✅ Sandbox mode first; campaign after — RCT-style themed parks with challenges (e.g., raise park value within one in-game year).
+3. **Pricing model:** ✅ Personal project first (portfolio/App Lab). Paid release stays on the table if it shapes up — keep the door open, don't architect against it.
+4. **Hand tracking:** ✅ Secondary objective — pursue it where it feels natural (build mode, UI), controllers remain primary.
+5. **Co-op spectator:** ✅ Keep as Phase 3, secondary — only after the core game is complete.
