@@ -26,7 +26,7 @@
 - **Chipset:** Snapdragon XR2 Gen 2. **Render target:** 72 Hz stable; 90/120 Hz experimental for smaller parks.
 - **Input:** Controllers (primary) + hand tracking (build mode, UI). Mixed input must not require re-teaching.
 
-### Engine: Unity 2022 LTS+ with Meta XR SDK (RECOMMENDED)
+### Engine: Unity 2022 LTS+ with Meta XR SDK (CONFIRMED by Gary, 2026-09-15)
 - **Why Unity:** Meta XR SDK (Interaction SDK, hand tracking, haptics, MRUK) is best-supported on Unity; URP is mature for mobile-VR perf tuning; asset pipeline for low-poly stylized art is fast; Gary's pipeline already favors quick iteration.
 - **Key packages:** Meta XR Interaction SDK (grab/ray/direct interactions), XR Hands, Meta Avatar SDK (guest/staff low-poly figures are custom; avatars optional for co-op later), MRUK (optional Phase 2: build coaster layouts on your real floor), Unity Input System + XR Interaction Toolkit as fallback layer.
 - **Considered alternatives:**
