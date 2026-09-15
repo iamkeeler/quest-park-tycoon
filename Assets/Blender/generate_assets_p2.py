@@ -5,7 +5,7 @@
 #
 # Produces FBX files in Assets/_Project/Models/:
 #   coastercar.fbx, coasterstation.fbx, tracksupport.fbx, ferriswheel.fbx,
-#   merrygoround.fbx, swigingship.fbx, drinksstall.fbx,
+#   merrygoround.fbx, swingingship.fbx, drinksstall.fbx,
 #   cottoncandystall.fbx, infokiosk.fbx, pathtile.fbx, queuetile.fbx,
 #   guestfigure.fbx, stafffigure.fbx, entrancegate.fbx
 #
@@ -21,6 +21,7 @@ import bpy
 import os
 import random
 import math
+import zlib
 
 SEED = 20260915
 JITTER = 0.035  # meters of handmade wobble on organic/clay parts
@@ -128,7 +129,9 @@ def flatten(obj):
 
 def build_prop(name, parts):
     """parts: list of (object, jitter_amount or 0). Joins, shades, exports FBX."""
-    rng = random.Random(SEED + hash(name) % 10000)
+    # Stable per-asset seed: zlib.crc32 is deterministic across processes,
+    # unlike Python's hash() which is salted per-process.
+    rng = random.Random(SEED + zlib.crc32(name.encode("utf-8")) % 10000)
     for obj, jamt in parts:
         if jamt > 0:
             jitter(obj, jamt, rng)
