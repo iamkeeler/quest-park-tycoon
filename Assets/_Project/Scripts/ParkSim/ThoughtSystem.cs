@@ -7,7 +7,9 @@ namespace QuestParkTycoon
     public enum ThoughtType
     {
         Hungry, Thirsty, TooExpensive, QueuingTooLong, DisgustingPaths,
-        GreatRide, CleanPark, Tired, NeedBathroom, UmbrellaNeeded
+        GreatRide, CleanPark, Tired, NeedBathroom, UmbrellaNeeded,
+        BathroomRelief, LitterDisgust, VandalAngry, VandalCaught, VandalCalmed,
+        Entertained, StaffQuit
     }
 
     /// <summary>
@@ -51,6 +53,14 @@ namespace QuestParkTycoon
 
         public static IReadOnlyCollection<string> GlobalFeed() => _feed;
 
+        /// <summary>Posts a park-wide announcement (staff quits, awards) to the global feed.</summary>
+        public static void Announce(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return;
+            _feed.Enqueue(text);
+            while (_feed.Count > FeedSize) _feed.Dequeue();
+        }
+
         /// <summary>Called by GuestSpawner when a guest is pooled.</summary>
         public static void ForgetGuest(GuestAgent guest)
         {
@@ -72,6 +82,13 @@ namespace QuestParkTycoon
                 case ThoughtType.Tired: return "I need to sit down for a bit.";
                 case ThoughtType.NeedBathroom: return "I need to find a bathroom!";
                 case ThoughtType.UmbrellaNeeded: return "It's raining and I don't have an umbrella.";
+                case ThoughtType.BathroomRelief: return "Ahh, much better.";
+                case ThoughtType.LitterDisgust: return "Ugh, there's trash all over the paths.";
+                case ThoughtType.VandalAngry: return "I hate this place! I'll show them!";
+                case ThoughtType.VandalCaught: return "A security guard caught me!";
+                case ThoughtType.VandalCalmed: return "Okay... I'm calming down.";
+                case ThoughtType.Entertained: return $"The {s} entertainer is hilarious!";
+                case ThoughtType.StaffQuit: return "A staff member just quit.";
                 default: return "...";
             }
         }

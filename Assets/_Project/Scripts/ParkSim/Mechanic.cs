@@ -43,9 +43,19 @@ namespace QuestParkTycoon
 
         public override void WorkTick(float dt, float gdt)
         {
+            TickMorale(gdt, BrokenRideWorkload());
             MaintainReliability(gdt);
             if (_job != null) TickRepairJob(dt, gdt);
             else if (FollowPath(dt, walkSpeed * 0.5f)) WanderPatrol();
+        }
+
+        /// <summary>0..1 workload: 4+ broken rides at once is maximum stress.</summary>
+        private float BrokenRideWorkload()
+        {
+            int broken = 0;
+            foreach (IRide ride in RideDirectory.Rides)
+                if (ride.IsBroken) broken++;
+            return Mathf.Clamp01(broken / 4f);
         }
 
         private void MaintainReliability(float gdt)

@@ -20,6 +20,8 @@ namespace QuestParkTycoon
 
         public void Tick(float dt)
         {
+            // Cleanliness is driven live by the litter registry (RCT1: dirty paths tank the rating).
+            cleanliness = 1f - LitterSystem.CleanlinessPenalty();
             float avg = (rideVariety + rideQuality + cleanliness + guestHappiness + scenery) / 5f;
             rating = Mathf.Clamp(Mathf.RoundToInt(avg * 999f), 0, 999);
         }

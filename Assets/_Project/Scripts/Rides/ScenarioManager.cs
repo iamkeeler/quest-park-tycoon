@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace QuestParkTycoon.Rides
 {
-    public enum ObjectiveType { None, ParkValue, GuestCount, ParkRating }
+    public enum ObjectiveType { None, ParkValue, GuestCount, ParkRating, Profit }
 
     [Serializable]
     public class ScenarioDef
@@ -34,12 +34,46 @@ namespace QuestParkTycoon.Rides
         private GameDate _date;
         private ParkRating _rating;
 
+        // Profit objective bookkeeping: cash snapshot at each month start,
+        // plus how many days of that month saw rain (scenario flavor/UI).
+        private float _cashAtMonthStart;
+        private int _rainyDaysThisMonth;
+
+        public float ProfitThisMonth => Economy.Cash - _cashAtMonthStart;
+        public int RainyDaysThisMonth => _rainyDaysThisMonth;
+
         private void Awake()
         {
             _date = FindObjectOfType<GameDate>();
             _rating = FindObjectOfType<ParkRating>();
+            if (_date != null)
+            {
+                _date.OnNewMonth += OnNewMonth;
+                _date.OnNewDay += OnNewDay;
+            }
             var tick = FindObjectOfType<SimTick>();
             if (tick != null) tick.Register(this);
+        }
+
+        private void OnDestroy()
+        {
+            if (_date != null)
+            {
+                _date.OnNewMonth -= OnNewMonth;
+                _date.OnNewDay -= OnNewDay;
+            }
+        }
+
+        private void OnNewMonth()
+        {
+            _cashAtMonthStart = Economy.Cash;
+            _rainyDaysThisMonth = 0;
+        }
+
+        private void OnNewDay()
+        {
+            if (WeatherSystem.Instance != null && WeatherSystem.Instance.IsRaining)
+                _rainyDaysThisMonth++;
         }
 
         public static ScenarioDef SandboxScenario() => new ScenarioDef
@@ -60,11 +94,50 @@ namespace QuestParkTycoon.Rides
             deadlineMonthIndex = 7, // October
         };
 
+        /// <summary>Scenario 2: keep the park spotless; rating follows cleanliness.</summary>
+        public static ScenarioDef TidyParkChallenge() => new ScenarioDef
+        {
+            scenarioName = "Tidy Park Challenge",
+            briefing = "Reach a park rating of 700 by the end of October, Year 2. " +
+                       "Hint: place litter bins everywhere and hire handymen — guests hate a messy park.",
+            objective = ObjectiveType.ParkRating,
+            targetValue = 700f,
+            deadlineYear = 2,
+            deadlineMonthIndex = 7, // October
+        };
+
+        /// <summary>Scenario 3: build big; value follows thrilling rides.</summary>
+        public static ScenarioDef CoasterCapital() => new ScenarioDef
+        {
+            scenarioName = "Coaster Capital",
+            briefing = "Build a park worth $40,000 by the end of October, Year 2. " +
+                       "Big coasters and high-excitement rides drive park value fastest.",
+            objective = ObjectiveType.ParkValue,
+            targetValue = 40000f,
+            deadlineYear = 2,
+            deadlineMonthIndex = 7, // October
+        };
+
+        /// <summary>Scenario 4: profit sprint; rain makes umbrellas print money.</summary>
+        public static ScenarioDef RainySeason() => new ScenarioDef
+        {
+            scenarioName = "Rainy Season",
+            briefing = "Earn $8,000 profit in a single month before the end of October, Year 2. " +
+                       "Hint: rainy months are gold — guests buy umbrellas at any price, " +
+                       "and indoor rides stay busy while the rain keeps casual visitors home.",
+            objective = ObjectiveType.Profit,
+            targetValue = 8000f,
+            deadlineYear = 2,
+            deadlineMonthIndex = 7, // October
+        };
+
         public void StartScenario(ScenarioDef def)
         {
             active = def;
             isComplete = false;
             hasFailed = false;
+            _cashAtMonthStart = Economy.Cash; // profit objective starts counting now
+            _rainyDaysThisMonth = 0;
         }
 
         public void Tick(float dt)
@@ -95,6 +168,8 @@ namespace QuestParkTycoon.Rides
                 // GuestCount: wired to the live guest registry (GuestSpawner).
                 ObjectiveType.GuestCount =>
                     GuestSpawner.Instance != null ? GuestSpawner.Instance.ActiveCount : 0f,
+                // Profit: cash gained since the start of the current game month.
+                ObjectiveType.Profit => ProfitThisMonth,
                 _ => 0f,
             };
         }

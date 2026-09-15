@@ -29,6 +29,19 @@ namespace QuestParkTycoon
 
         public int ActiveCount => _active.Count;
 
+        /// <summary>
+        /// Combined arrival multiplier, owned by the economy team:
+        /// marketing campaigns x award bonuses. Defaults to 1 (no effect).
+        /// MarketingSystem and AwardsSystem keep it current via Recalc.
+        /// </summary>
+        public static float SpawnRateMultiplier = 1f;
+
+        public static void RecalcSpawnRateMultiplier()
+        {
+            SpawnRateMultiplier = MarketingSystem.CampaignSpawnMultiplier
+                                * AwardsSystem.AwardSpawnMultiplier;
+        }
+
         private void Awake()
         {
             Instance = this;
@@ -47,6 +60,11 @@ namespace QuestParkTycoon
 
             int rating = _rating != null ? _rating.rating : 500;
             int target = Mathf.Clamp(Mathf.RoundToInt(rating / 999f * 150f) + marketingLevel * 25, 0, maxGuests);
+            // Economy team: marketing/award multiplier. Weather team: rain keeps
+            // guests home (0.7x), heatwaves surge attendance (1.3x).
+            float demand = Rides.WeatherSystem.Instance != null
+                ? Rides.WeatherSystem.Instance.GuestDemandMultiplier : 1f;
+            target = Mathf.Clamp(Mathf.RoundToInt(target * SpawnRateMultiplier * demand), 0, maxGuests);
             if (_active.Count < target) Spawn();
         }
 

@@ -39,6 +39,10 @@ namespace QuestParkTycoon
         [HideInInspector] public float patience;         // queue patience, game-minutes
         [HideInInspector] public bool thoughtQueueComplained;
         [HideInInspector] public float vomitCooldown;    // game-minutes
+        [HideInInspector] public bool isVandal;          // sustained misery turned this guest nasty
+        [HideInInspector] public float vandalTimer;      // game-minutes spent below the misery line
+        [HideInInspector] public float vandalCooldown;   // game-minutes between vandal acts
+        [HideInInspector] public float entertainCooldown; // game-minutes between Entertained thoughts
         [HideInInspector] public IRide targetRide;
         [HideInInspector] public IStall targetStall;
         [HideInInspector] public Vector3 homeExit;
@@ -76,6 +80,10 @@ namespace QuestParkTycoon
             patience = 0f;
             thoughtQueueComplained = false;
             vomitCooldown = 0f;
+            isVandal = false;
+            vandalTimer = 0f;
+            vandalCooldown = 0f;
+            entertainCooldown = 0f;
             targetRide = null;
             targetStall = null;
             path.Clear();

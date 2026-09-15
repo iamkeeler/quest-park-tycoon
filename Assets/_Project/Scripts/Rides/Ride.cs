@@ -13,7 +13,10 @@ namespace QuestParkTycoon.Rides
     public enum RideType
     {
         FerrisWheel, MerryGoRound, SwingingShip, SteelCoaster,
-        BurgerStall, DrinksStall, CottonCandyStall, InfoKiosk
+        BurgerStall, DrinksStall, CottonCandyStall, InfoKiosk,
+        FriesStall, PizzaStall, IceCreamStall, PopcornStall,
+        CoffeeStall, BalloonStall, SouvenirStall, Bathroom,
+        Twist, TopSpin, GoKarts, LaunchedFreefall, HauntedHouse, ObservationTower
     }
 
     /// <summary>

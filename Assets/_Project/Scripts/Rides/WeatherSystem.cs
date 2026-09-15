@@ -26,6 +26,12 @@ namespace QuestParkTycoon.Rides
         /// <summary>Phase 2 hook: water rides surge on hot days (RCT1 rule).</summary>
         public bool IsHotDay => temperatureC >= 28f;
 
+        /// <summary>
+        /// Arrival demand multiplier for GuestSpawner: rain keeps guests home
+        /// (0.7x), heatwaves surge attendance (1.3x), otherwise neutral.
+        /// </summary>
+        public float GuestDemandMultiplier { get; private set; } = 1f;
+
         public event Action<WeatherState> OnWeatherChanged;
 
         private float _stateTimeLeft;
@@ -34,6 +40,7 @@ namespace QuestParkTycoon.Rides
         {
             if (Instance != null && Instance != this) { Destroy(this); return; }
             Instance = this;
+            UpdateDemandMultiplier();
             _stateTimeLeft = UnityEngine.Random.Range(minStateDuration, maxStateDuration);
             var tick = FindObjectOfType<SimTick>();
             if (tick != null) tick.Register(this);
@@ -45,6 +52,10 @@ namespace QuestParkTycoon.Rides
             if (_stateTimeLeft <= 0f) RollNewWeather();
         }
 
+        /// <summary>Rain 0.7x arrivals, heatwave 1.3x, else 1x.</summary>
+        private void UpdateDemandMultiplier() =>
+            GuestDemandMultiplier = IsRaining ? 0.7f : (IsHotDay ? 1.3f : 1f);
+
         private void RollNewWeather()
         {
             float roll = UnityEngine.Random.value;
@@ -54,6 +65,7 @@ namespace QuestParkTycoon.Rides
                   : WeatherState.Rain;
             temperatureC = Mathf.Clamp(temperatureC + UnityEngine.Random.Range(-3f, 3f), 12f, 34f);
             _stateTimeLeft = UnityEngine.Random.Range(minStateDuration, maxStateDuration);
+            UpdateDemandMultiplier();
             OnWeatherChanged?.Invoke(state);
         }
 

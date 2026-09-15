@@ -20,6 +20,9 @@ namespace QuestParkTycoon
 
         public float walkSpeed = 1.6f;
 
+        [Header("Morale (0..1; hits 0 -> quits)")]
+        [Range(0f, 1f)] public float morale = 1f;
+
         [HideInInspector] public List<Vector3> path = new List<Vector3>();
         [HideInInspector] public int pathIndex;
 
@@ -72,6 +75,20 @@ namespace QuestParkTycoon
 
         /// <summary>Per-tick work. dt = real seconds, gdt = game-minutes.</summary>
         public abstract void WorkTick(float dt, float gdt);
+
+        /// <summary>
+        /// Call each tick with 0..1 workload. Sustained heavy workload erodes
+        /// morale; at 0 the staffer quits (see StaffManager). A full day of
+        /// maximum workload (~1000 game-minutes) drains morale completely.
+        /// </summary>
+        protected void TickMorale(float gdt, float workload01)
+        {
+            if (workload01 > 0.4f)
+                morale = Mathf.Clamp01(morale - gdt * 0.001f * workload01);
+        }
+
+        /// <summary>Payday: wages land, morale recovers (RCT1).</summary>
+        public void OnPayday() => morale = Mathf.Clamp01(morale + 0.4f);
     }
 
     /// <summary>
@@ -124,7 +141,11 @@ namespace QuestParkTycoon
         private void PayWages()
         {
             float total = 0f;
-            foreach (StaffMember s in staff) total += s.wage;
+            foreach (StaffMember s in staff)
+            {
+                total += s.wage;
+                s.OnPayday(); // payday restores morale (RCT1)
+            }
             Economy.Cash -= total;
             Debug.Log($"[QuestParkTycoon] Monthly wages paid: ${total:F0} ({staff.Count} staff).");
         }
@@ -133,8 +154,30 @@ namespace QuestParkTycoon
         {
             float gdt = dt * GameClock.GameMinutesPerRealSecond;
             for (int i = staff.Count - 1; i >= 0; i--)
-                if (staff[i] != null) staff[i].WorkTick(dt, gdt);
+            {
+                StaffMember s = staff[i];
+                if (s == null) { staff.RemoveAt(i); continue; }
+                s.WorkTick(dt, gdt);
+                // Morale hit zero: the staffer quits on the spot.
+                if (s.morale <= 0f) Quit(s, i);
+            }
         }
+
+        /// <summary>Despawn + global-feed announcement when morale bottoms out.</summary>
+        private void Quit(StaffMember s, int index)
+        {
+            staff.RemoveAt(index);
+            ThoughtSystem.Announce($"{s.staffName} the {RoleName(s)} quit — morale hit rock bottom.");
+            Debug.Log($"[QuestParkTycoon] {s.staffName} quit (morale 0).");
+            Destroy(s.gameObject);
+        }
+
+        private static string RoleName(StaffMember s) =>
+            s is Handyman ? "handyman"
+            : s is Mechanic ? "mechanic"
+            : s is SecurityGuard ? "security guard"
+            : s is Entertainer ? "entertainer"
+            : "staff";
 
         /// <summary>RCT1 radio dispatch: nearest free mechanic gets the job.</summary>
         private void DispatchMechanic(IRide ride)

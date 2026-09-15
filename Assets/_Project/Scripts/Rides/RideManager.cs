@@ -49,6 +49,13 @@ namespace QuestParkTycoon.Rides
             error = null;
             if (ride == null) { error = "No ride to place."; return false; }
 
+            // Research gate (economy team): unresearched types can't be built yet.
+            if (!ResearchSystem.IsUnlocked(ride.rideType))
+            {
+                error = $"{ride.rideName} hasn't been researched yet.";
+                return false;
+            }
+
             if (Mathf.Abs(position.x) + footprintRadius > terrainHalfSize ||
                 Mathf.Abs(position.z) + footprintRadius > terrainHalfSize)
             {

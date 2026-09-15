@@ -3,9 +3,10 @@ using UnityEngine;
 
 namespace QuestParkTycoon.Rides
 {
-    public enum StallType { Burger, Drinks, CottonCandy, InfoKiosk }
+    public enum StallType { Burger, Drinks, CottonCandy, InfoKiosk,
+        Bathroom, Fries, Pizza, IceCream, Popcorn, Coffee, Balloon, Souvenir }
 
-    public enum StallEffect { ReduceHunger, ReduceThirst, Umbrella, ParkMap }
+    public enum StallEffect { ReduceHunger, ReduceThirst, ReduceBladder, Umbrella, ParkMap, HappinessBoost }
 
     [Serializable]
     public struct StallItem
@@ -68,6 +69,7 @@ namespace QuestParkTycoon.Rides
         /// Sell to one guest. Returns true if a sale happened.
         /// RCT1 rules preserved: umbrellas sell at ANY price when raining;
         /// maps mark the guest as not-lost (guest-AI team reads hasMap).
+        /// All payments route through Economy.TakePayment (free items skip it).
         /// </summary>
         public bool ServeGuest(GuestAgent guest)
         {
@@ -82,22 +84,25 @@ namespace QuestParkTycoon.Rides
                 price = Mathf.Max(price, 10f); // RCT1: guests buy umbrellas at any price in rain
             }
 
-            if (guest.wallet < price)
+            if (price > 0f)
             {
-                guest.lastThought = $"I'm not paying that much for {item.itemName}.";
-                return false;
+                float paid = Economy.TakePayment(guest, price);
+                if (paid < price)
+                {
+                    guest.lastThought = $"I'm not paying that much for {item.itemName}.";
+                    return false;
+                }
+                lifetimeRevenue += paid;
             }
-
-            guest.wallet -= price;
-            Economy.Cash += price;
-            lifetimeRevenue += price;
 
             switch (item.effect)
             {
                 case StallEffect.ReduceHunger: guest.hunger = Mathf.Clamp01(guest.hunger - 0.6f); break;
                 case StallEffect.ReduceThirst: guest.thirst = Mathf.Clamp01(guest.thirst - 0.7f); break;
+                case StallEffect.ReduceBladder: guest.bladder = Mathf.Clamp01(guest.bladder - 1f); break;
                 case StallEffect.Umbrella: guest.hasUmbrella = true; guest.happiness = Mathf.Clamp01(guest.happiness + 0.1f); break;
                 case StallEffect.ParkMap: guest.hasMap = true; break;
+                case StallEffect.HappinessBoost: guest.happiness = Mathf.Clamp01(guest.happiness + 0.15f); break;
             }
             return true;
         }
@@ -109,8 +114,14 @@ namespace QuestParkTycoon.Rides
             {
                 if (item.effect == StallEffect.ReduceHunger && guest.hunger > 0.4f) return item;
                 if (item.effect == StallEffect.ReduceThirst && guest.thirst > 0.4f) return item;
+                if (item.effect == StallEffect.ReduceBladder && guest.bladder > 0.5f) return item;
                 if (item.effect == StallEffect.Umbrella &&
                     WeatherSystem.Instance != null && WeatherSystem.Instance.IsRaining) return item;
+            }
+            foreach (var item in items)
+            {
+                // Souvenirs/balloons are impulse buys for unhappy guests.
+                if (item.effect == StallEffect.HappinessBoost && guest.happiness < 0.5f) return item;
             }
             return items[0];
         }
@@ -129,6 +140,14 @@ namespace QuestParkTycoon.Rides
                 StallType.Burger => RideType.BurgerStall,
                 StallType.Drinks => RideType.DrinksStall,
                 StallType.CottonCandy => RideType.CottonCandyStall,
+                StallType.Fries => RideType.FriesStall,
+                StallType.Pizza => RideType.PizzaStall,
+                StallType.IceCream => RideType.IceCreamStall,
+                StallType.Popcorn => RideType.PopcornStall,
+                StallType.Coffee => RideType.CoffeeStall,
+                StallType.Balloon => RideType.BalloonStall,
+                StallType.Souvenir => RideType.SouvenirStall,
+                StallType.Bathroom => RideType.Bathroom,
                 _ => RideType.InfoKiosk,
             };
             switch (type)
@@ -152,6 +171,39 @@ namespace QuestParkTycoon.Rides
                         new StallItem { itemName = "Park Map", price = 0.5f, effect = StallEffect.ParkMap },
                         new StallItem { itemName = "Umbrella", price = 2.5f, effect = StallEffect.Umbrella },
                     };
+                    break;
+                case StallType.Fries:
+                    stall.rideName = "Fries Stand"; stall.buildCost = 300f;
+                    stall.items = new[] { new StallItem { itemName = "Fries", price = 1.6f, effect = StallEffect.ReduceHunger } };
+                    break;
+                case StallType.Pizza:
+                    stall.rideName = "Pizza Place"; stall.buildCost = 350f;
+                    stall.items = new[] { new StallItem { itemName = "Pizza Slice", price = 2.2f, effect = StallEffect.ReduceHunger } };
+                    break;
+                case StallType.IceCream:
+                    stall.rideName = "Ice Cream Stall"; stall.buildCost = 280f;
+                    stall.items = new[] { new StallItem { itemName = "Ice Cream", price = 1.5f, effect = StallEffect.ReduceHunger } };
+                    break;
+                case StallType.Popcorn:
+                    stall.rideName = "Popcorn Stall"; stall.buildCost = 250f;
+                    stall.items = new[] { new StallItem { itemName = "Popcorn", price = 1.3f, effect = StallEffect.ReduceHunger } };
+                    break;
+                case StallType.Coffee:
+                    stall.rideName = "Coffee Shop"; stall.buildCost = 260f;
+                    stall.items = new[] { new StallItem { itemName = "Coffee", price = 1.4f, effect = StallEffect.ReduceThirst } };
+                    break;
+                case StallType.Balloon:
+                    stall.rideName = "Balloon Stall"; stall.buildCost = 220f;
+                    stall.items = new[] { new StallItem { itemName = "Balloon", price = 2.0f, effect = StallEffect.HappinessBoost } };
+                    break;
+                case StallType.Souvenir:
+                    stall.rideName = "Souvenir Shop"; stall.buildCost = 400f;
+                    stall.items = new[] { new StallItem { itemName = "T-Shirt", price = 4.0f, effect = StallEffect.HappinessBoost } };
+                    break;
+                case StallType.Bathroom:
+                    stall.rideName = "Bathrooms"; stall.buildCost = 350f;
+                    // RCT1: bathrooms are free; guests just need them to exist.
+                    stall.items = new[] { new StallItem { itemName = "Restroom Visit", price = 0f, effect = StallEffect.ReduceBladder } };
                     break;
             }
             return stall;

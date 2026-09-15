@@ -4,6 +4,7 @@ namespace QuestParkTycoon
 {
     /// <summary>
     /// Ensures every Phase-1 sim system exists exactly once on a "ParkSim" root.
+    /// Phase-2 economy systems (research, marketing, awards) ride along too.
     /// Called at the end of SpikeBootstrap.Boot (after SimTick exists) so each
     /// system's Awake can self-register with SimTick; registration is also
     /// forced here to be robust against script-execution-order surprises.
@@ -18,9 +19,14 @@ namespace QuestParkTycoon
 
             Ensure<GameClockDriver>(root);
             Ensure<ParkRating>(root);
+            Ensure<LitterSystem>(root);
             Ensure<GuestAI>(root);
             Ensure<GuestSpawner>(root);
             Ensure<StaffManager>(root);
+            // Phase 2 economy systems (safe to add: each is a no-op until used).
+            Ensure<ResearchSystem>(root);
+            Ensure<MarketingSystem>(root);
+            Ensure<AwardsSystem>(root);
 
             var tick = Object.FindObjectOfType<SimTick>();
             if (tick != null)

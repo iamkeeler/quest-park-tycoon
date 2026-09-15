@@ -33,6 +33,9 @@ namespace QuestParkTycoon
 
         public override void WorkTick(float dt, float gdt)
         {
+            // Morale: drowning in litter is miserable work (RCT1).
+            TickMorale(gdt, Mathf.Clamp01(LitterSystem.Count / 60f));
+
             if (_target != null && !ParkEvents.Litter.Contains(_target)) _target = null;
 
             bool sweepOn = (tasks & HandymanTasks.SweepPaths) != 0;

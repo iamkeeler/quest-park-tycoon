@@ -31,6 +31,9 @@ namespace QuestParkTycoon
         private readonly List<GuestAgent> _guests = new List<GuestAgent>();
         public int ActiveGuestCount => _guests.Count;
 
+        /// <summary>Read-only guest list for staff (guards, entertainers) and UI.</summary>
+        public IReadOnlyList<GuestAgent> Guests => _guests;
+
         private void Awake()
         {
             Instance = this;
@@ -79,6 +82,18 @@ namespace QuestParkTycoon
                 if (ParkEvents.Litter.Count > 25) ThoughtSystem.Think(g, ThoughtType.DisgustingPaths);
                 else if (g.happiness > 0.85f) ThoughtSystem.Think(g, ThoughtType.CleanPark);
             }
+            // Disgust at litter right underfoot (probability-gated: 300 guests x 200 spots is too hot to scan raw).
+            if (Random.value < 0.002f && LitterSystem.NearestWithin(g.transform.position, 4f))
+            {
+                ThoughtSystem.Think(g, ThoughtType.LitterDisgust);
+                g.happiness = Mathf.Clamp01(g.happiness - 0.05f);
+            }
+            // Miserable guests litter when no bin is near (RCT1).
+            if (g.happiness < 0.3f && g.currentState != GuestState.Riding && Random.value < gdt * 0.03f)
+                LitterSystem.TryDropTrash(g.transform.position);
+
+            TickVandalState(g, gdt);
+            TickVandal(g, gdt);
 
             switch (g.currentState)
             {
@@ -90,11 +105,17 @@ namespace QuestParkTycoon
                 case GuestState.SeekingStall: TickSeekingStall(g, dt); break;
                 case GuestState.Eating:
                     g.stateTimer -= gdt;
-                    if (g.stateTimer <= 0f) { g.currentState = GuestState.Wandering; WanderTo(g); }
+                    if (g.stateTimer <= 0f)
+                    {
+                        // Finished snack: wrappers hit the ground when no bin is near (RCT1).
+                        if (Random.value < 0.3f) LitterSystem.TryDropTrash(g.transform.position);
+                        g.currentState = GuestState.Wandering;
+                        WanderTo(g);
+                    }
                     break;
                 case GuestState.SeekingBathroom: TickSeekingBathroom(g, dt); break;
-                case GuestState.Resting: // benches recover tiredness/nausea 3x
-                    g.tiredness = Mathf.Clamp01(g.tiredness - gdt * 0.03f);
+                case GuestState.Resting: // rest restores tiredness over time (benches: 3x — park team)
+                    g.tiredness = Mathf.Clamp01(g.tiredness - gdt * 0.06f);
                     g.nausea = Mathf.Clamp01(g.nausea - gdt * 0.03f);
                     g.stateTimer -= gdt;
                     if (g.stateTimer <= 0f) { g.currentState = GuestState.Wandering; WanderTo(g); }
@@ -108,11 +129,43 @@ namespace QuestParkTycoon
             g.hunger = Mathf.Clamp01(g.hunger + gdt * 0.004f);
             g.thirst = Mathf.Clamp01(g.thirst + gdt * 0.005f);
             g.bladder = Mathf.Clamp01(g.bladder + gdt * 0.003f);
-            g.tiredness = Mathf.Clamp01(g.tiredness + gdt * 0.0015f);
+            // Entertainers nearby make the day feel shorter: tiredness accrues slower.
+            g.tiredness = Mathf.Clamp01(g.tiredness + gdt * 0.0015f * Entertainer.TirednessGainMultiplier(g.transform.position));
             g.nausea = Mathf.Clamp01(g.nausea - gdt * 0.01f);
             g.vomitCooldown = Mathf.Max(0f, g.vomitCooldown - gdt);
+            g.entertainCooldown = Mathf.Max(0f, g.entertainCooldown - gdt);
             float stress = Mathf.Max(Mathf.Max(g.hunger, g.thirst), Mathf.Max(g.bladder, g.tiredness));
             g.happiness = Mathf.MoveTowards(g.happiness, 0.85f - stress * 0.6f, gdt * 0.05f);
+        }
+
+        /// <summary>
+        /// RCT1 vandalism: guests stuck below 0.25 happiness long enough turn
+        /// nasty (harassment + littering). Guards calm them; happiness recovery
+        /// calms them naturally.
+        /// </summary>
+        private void TickVandalState(GuestAgent g, float gdt)
+        {
+            if (!g.isVandal)
+            {
+                if (g.happiness < 0.25f)
+                {
+                    g.vandalTimer += gdt;
+                    if (g.vandalTimer > 15f && Random.value < 0.35f)
+                    {
+                        g.isVandal = true;
+                        g.vandalCooldown = 2f;
+                        ThoughtSystem.Think(g, ThoughtType.VandalAngry);
+                    }
+                }
+                else g.vandalTimer = 0f;
+                return;
+            }
+            if (g.happiness > 0.6f)
+            {
+                g.isVandal = false;
+                g.vandalTimer = 0f;
+                ThoughtSystem.Think(g, ThoughtType.VandalCalmed);
+            }
         }
 
         private bool FollowPath(GuestAgent g, float dt)

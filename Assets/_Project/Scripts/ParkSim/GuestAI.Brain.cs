@@ -14,11 +14,18 @@ namespace QuestParkTycoon
         private void DecideNext(GuestAgent g)
         {
             if (g.wallet < 1f || g.happiness < 0.15f) { Leave(g); return; } // broke/miserable go home
-            // Phase 1: no bathrooms exist yet — guests suffer (RCT1 "I need the bathroom").
-            if (g.bladder > 0.7f) { SeekStall(g, Array.Empty<StallType>(), ThoughtType.NeedBathroom, true); return; }
-            if (g.hunger > 0.65f) { SeekStall(g, new[] { StallType.Burger, StallType.CottonCandy }, ThoughtType.Hungry, false); return; }
-            if (g.thirst > 0.65f) { SeekStall(g, new[] { StallType.Drinks }, ThoughtType.Thirsty, false); return; }
-            if (g.tiredness > 0.8f) { ThoughtSystem.Think(g, ThoughtType.Tired); g.currentState = GuestState.Resting; g.stateTimer = 4f; return; }
+            // Phase 2: bathrooms are real buildings — seek the nearest free one.
+            if (g.bladder > 0.65f) { SeekStall(g, new[] { StallType.Bathroom }, ThoughtType.NeedBathroom, true); return; }
+            if (g.hunger > 0.65f) { SeekStall(g, new[] { StallType.Burger, StallType.CottonCandy, StallType.Fries, StallType.Pizza, StallType.Popcorn, StallType.IceCream }, ThoughtType.Hungry, false); return; }
+            if (g.thirst > 0.65f) { SeekStall(g, new[] { StallType.Drinks, StallType.Coffee }, ThoughtType.Thirsty, false); return; }
+            // Tired guests rest eagerly; rest duration scales with exhaustion.
+            if (g.tiredness > 0.75f)
+            {
+                ThoughtSystem.Think(g, ThoughtType.Tired);
+                g.currentState = GuestState.Resting;
+                g.stateTimer = 2f + g.tiredness * 8f;
+                return;
+            }
             if (Random.value < 0.55f && ChooseRide(g) != null) { g.currentState = GuestState.SeekingRide; return; }
             WanderTo(g);
         }
@@ -106,18 +113,63 @@ namespace QuestParkTycoon
         {
             if (g.targetStall == null || !g.targetStall.IsOpen)
             {
-                g.happiness = Mathf.Clamp01(g.happiness - 0.2f); // no bathrooms: guests suffer
+                // No bathroom in the park: guests suffer (RCT1 "I need the bathroom").
+                g.happiness = Mathf.Clamp01(g.happiness - 0.2f);
                 ThoughtSystem.Think(g, ThoughtType.NeedBathroom);
                 g.currentState = GuestState.Wandering;
                 WanderTo(g);
                 return;
             }
             if (!FollowPath(g, dt)) return;
-            g.targetStall.Serve(g); // may charge a fee; applies bladder relief
-            g.bladder = Mathf.Min(g.bladder, 0.05f);
+            // Bathroom stalls are free service buildings; Serve() resets bladder.
+            if (g.targetStall.Serve(g))
+            {
+                g.bladder = 0f; // belt-and-suspenders; the stall owns the real effect
+                g.happiness = Mathf.Clamp01(g.happiness + 0.15f);
+                ThoughtSystem.Think(g, ThoughtType.BathroomRelief);
+            }
+            else ThoughtSystem.Think(g, ThoughtType.NeedBathroom);
             g.targetStall = null;
             g.currentState = GuestState.Wandering;
             WanderTo(g);
+        }
+
+        /// <summary>
+        /// Vandal mischief, ticked alongside the state machine: harass a random
+        /// nearby guest and trash the paths. Security guards suppress this in
+        /// their own WorkTick (see SecurityGuard).
+        /// </summary>
+        private void TickVandal(GuestAgent g, float gdt)
+        {
+            if (!g.isVandal) return;
+            g.vandalCooldown -= gdt;
+            if (g.vandalCooldown > 0f) return;
+            g.vandalCooldown = 4f; // one nasty act every ~4 game-minutes
+
+            GuestAgent victim = RandomGuestNear(g.transform.position, 6f, g);
+            if (victim != null)
+            {
+                victim.happiness = Mathf.Clamp01(victim.happiness - 0.15f);
+                ThoughtSystem.Think(g, ThoughtType.VandalAngry);
+            }
+            LitterSystem.DropTrash(g.transform.position); // vandals ignore bins
+        }
+
+        private GuestAgent RandomGuestNear(Vector3 pos, float radius, GuestAgent exclude)
+        {
+            GuestAgent pick = null;
+            int seen = 0;
+            float r2 = radius * radius;
+            foreach (GuestAgent other in _guests)
+            {
+                if (other == null || other == exclude) continue;
+                Vector3 d = other.transform.position - pos;
+                d.y = 0f;
+                if (d.sqrMagnitude > r2) continue;
+                seen++;
+                if (Random.value < 1f / seen) pick = other; // reservoir: uniform among nearby
+            }
+            return pick;
         }
     }
 }

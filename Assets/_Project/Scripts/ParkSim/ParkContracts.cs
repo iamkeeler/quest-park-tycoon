@@ -119,6 +119,8 @@ namespace QuestParkTycoon
     /// - Mechanic signals repair done: ParkEvents.RaiseRepaired(ride)
     /// - Anyone spawns litter/vomit: ParkEvents.RaiseLitter(pos, kind)
     /// - Handyman clears it: ParkEvents.ClearLitter(spot)
+    /// - Staff quits are announced: ThoughtSystem.Announce(text)
+    /// The litter list is backed by LitterSystem (single registry, cap 200).
     /// </summary>
     public static class ParkEvents
     {
@@ -127,22 +129,20 @@ namespace QuestParkTycoon
         public static event Action<IRide> OnRideBrokenDown;
         public static event Action<IRide> OnRideRepaired;
 
-        private static readonly List<LitterSpot> _litter = new List<LitterSpot>();
-        public static IReadOnlyList<LitterSpot> Litter => _litter;
-        public const int MaxLitter = 400;
+        /// <summary>Live litter registry (backed by LitterSystem).</summary>
+        public static IReadOnlyList<LitterSpot> Litter => LitterSystem.Spots;
+        public const int MaxLitter = LitterSystem.MaxSpots;
 
         public static LitterSpot RaiseLitter(Vector3 pos, LitterKind kind)
         {
-            var spot = new LitterSpot { position = pos, kind = kind, ageMinutes = 0f };
-            if (_litter.Count >= MaxLitter) _litter.RemoveAt(0);
-            _litter.Add(spot);
+            var spot = LitterSystem.AddSpot(pos, kind);
             OnLitterSpawned?.Invoke(spot);
             return spot;
         }
 
         public static void ClearLitter(LitterSpot spot)
         {
-            if (spot != null && _litter.Remove(spot)) OnLitterCleared?.Invoke(spot);
+            if (LitterSystem.RemoveSpot(spot)) OnLitterCleared?.Invoke(spot);
         }
 
         public static void RaiseBreakdown(IRide ride)
